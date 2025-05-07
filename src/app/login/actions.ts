@@ -1,33 +1,84 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use server";
 
+import db from "@/lib/db";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 const passwordRegex = new RegExp(
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*?[#?!@$%^&*-]).+$/,
 );
 
-const formSchema = z.object({
-  email: z.string().email(),
-  password: z
-    .string()
-    .min(4)
-    .regex(
-      passwordRegex,
-      "Passwords must contain at least one UPPERCASE, lowercase, number and special characters #?!@$%^&*-",
-    ),
-});
+const formSchema = z
+  .object({
+    email: z.string().email(),
+    password: z
+      .string()
+      .min(4)
+      .regex(
+        passwordRegex,
+        "Passwords must contain at least one UPPERCASE, lowercase, number and special characters #?!@$%^&*-",
+      ),
+  })
+  .superRefine(async ({ email, password }, ctx) => {
+    const user = await db.user.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    if (!user) {
+      ctx.addIssue({
+        code: "custom",
+        message: "An account with this email does not exists.",
+        path: ["email"],
+        fatal: true,
+      });
+      return z.NEVER;
+    }
+
+    const ok = await bcrypt.compare(password, user!.password ?? "");
+    if (!ok) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Wrong password.",
+        path: ["password"],
+        fatal: true,
+      });
+      return z.NEVER;
+    }
+  });
 
 export const login = async (prevState: any, formData: FormData) => {
   const data = {
     email: formData.get("email"),
     password: formData.get("password"),
   };
-  const result = formSchema.safeParse(data);
+  const result = await formSchema.safeParseAsync(data);
 
   if (!result.success) {
     return result.error.flatten();
   } else {
-    console.log(result.data);
+    const user = await db.user.findUnique({
+      where: {
+        email: result.data.email,
+      },
+      select: {
+        id: true,
+        password: true,
+      },
+    });
+
+    const session = await getSession();
+    session.id = user!.id;
+    await session.save();
+
+    redirect("/profile");
   }
 };
