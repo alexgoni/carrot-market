@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "./lib/session";
 
-const publicOnlyPaths = new Set(["/", "/login", "/sms", "/create-account"]);
+const publicOnlyPaths = new Set([
+  "/",
+  "/login",
+  "/sms",
+  "/create-account",
+  "/github/start",
+  "/github/complete",
+]);
 
 export async function middleware(request: NextRequest) {
   const session = await getSession();

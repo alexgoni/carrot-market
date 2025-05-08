@@ -11,3 +11,9 @@ export const getSession = async () => {
     password: process.env.COOKIE_PASSWORD!,
   });
 };
+
+export const storeUserSession = async (id: number) => {
+  const session = await getSession();
+  session.id = id;
+  await session.save();
+};

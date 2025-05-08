@@ -5,7 +5,7 @@ import db from "@/lib/db";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
+import { storeUserSession } from "@/lib/session";
 
 const passwordRegex = new RegExp(
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*?[#?!@$%^&*-]).+$/,
@@ -97,10 +97,7 @@ export const createAccount = async (prevState: any, formData: FormData) => {
       },
     });
 
-    const session = await getSession();
-    session.id = user.id;
-    await session.save();
-
+    await storeUserSession(user.id);
     redirect("/profile");
   }
 };

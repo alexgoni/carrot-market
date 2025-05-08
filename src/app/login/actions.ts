@@ -4,7 +4,7 @@
 import db from "@/lib/db";
 import { z } from "zod";
 import bcrypt from "bcrypt";
-import { getSession } from "@/lib/session";
+import { storeUserSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 
 const passwordRegex = new RegExp(
@@ -55,7 +55,7 @@ const formSchema = z
     }
   });
 
-export const login = async (prevState: any, formData: FormData) => {
+export const loginAction = async (prevState: any, formData: FormData) => {
   const data = {
     email: formData.get("email"),
     password: formData.get("password"),
@@ -75,10 +75,7 @@ export const login = async (prevState: any, formData: FormData) => {
       },
     });
 
-    const session = await getSession();
-    session.id = user!.id;
-    await session.save();
-
+    await storeUserSession(user!.id);
     redirect("/profile");
   }
 };
